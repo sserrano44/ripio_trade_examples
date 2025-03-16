@@ -1,64 +1,8 @@
 #!/usr/bin/env python3
-import os
-import base64
-import hmac
-import hashlib
 import time
 import json
-import requests
 from datetime import datetime
-
-def generate_signature(api_secret, timestamp, method, path, payload=""):
-    """Generate signature for Ripio Trade API.
-    
-    Args:
-        api_secret: API secret key
-        timestamp: Current timestamp in milliseconds
-        method: HTTP method (GET, POST, DELETE)
-        path: API endpoint path
-        payload: JSON payload for POST requests
-        
-    Returns:
-        str: Base64 encoded signature
-    """
-    # Create message string: Timestamp + HTTP Method + Path + JSON Payload
-    message = f"{timestamp}{method}{path}{payload}"
-    
-    # Create HMAC SHA256 signature
-    signature = hmac.new(
-        api_secret.encode('utf-8'),
-        message.encode('utf-8'),
-        hashlib.sha256
-    ).digest()
-    
-    # Encode in Base64
-    return base64.b64encode(signature).decode('utf-8')
-
-def create_auth_headers(api_key, api_secret, method, path, payload=""):
-    """Create authentication headers for Ripio Trade API.
-    
-    Args:
-        api_key: API key
-        api_secret: API secret
-        method: HTTP method (GET, POST, DELETE)
-        path: API endpoint path
-        payload: JSON payload for POST requests
-        
-    Returns:
-        dict: Headers for API request
-    """
-    timestamp = str(int(time.time() * 1000))
-    
-    signature = generate_signature(api_secret, timestamp, method, path, payload)
-    
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': api_key,
-        'timestamp': timestamp,
-        'signature': signature,
-    }
-    
-    return headers
+from ripio_api_utils import make_request, get_api_credentials
 
 def create_order(api_key, api_secret, pair, side, order_type, amount, price, 
                  external_id=None, post_only=False, immediate_or_cancel=False, 
@@ -82,11 +26,7 @@ def create_order(api_key, api_secret, pair, side, order_type, amount, price,
     Returns:
         dict: API response with order details
     """
-    base_url = "https://api.ripiotrade.co/v4"
     endpoint = "/orders"
-    url = base_url + endpoint
-    path = "/v4" + endpoint
-    method = "POST"
     
     # Prepare order data
     order_data = {
@@ -109,45 +49,18 @@ def create_order(api_key, api_secret, pair, side, order_type, amount, price,
     if expiration:
         order_data["expiration"] = expiration
     
-    # Convert order data to JSON
-    payload = json.dumps(order_data, separators=(',', ':'))
-    
-    # Create authentication headers
-    headers = create_auth_headers(api_key, api_secret, method, path, payload)
-    
     print(f"\nCreating {order_type} {side} order for {pair}...")
     print(f"Amount: {amount}, Price: {price}")
     
-    try:
-        # Make the request
-        response = requests.post(url, headers=headers, data=payload)
+    # Make the request using the utility function
+    response = make_request(api_key, api_secret, "POST", endpoint, data=order_data)
+    
+    if response:
+        print("Order created successfully!")
+    else:
+        print("Failed to create order!")
         
-        # Print response status
-        print(f"Response status code: {response.status_code}")
-        
-        if response.status_code == 200:
-            data = response.json()
-            print("Order created successfully!")
-            return data
-        else:
-            print("Failed to create order!")
-            try:
-                error_data = response.json()
-                print(f"Error response: {json.dumps(error_data, indent=2)}")
-            except:
-                print(f"Error response text: {response.text}")
-            return None
-            
-    except requests.exceptions.RequestException as e:
-        print(f"Error making request: {e}")
-        if hasattr(e, 'response') and e.response:
-            print(f"Response status code: {e.response.status_code}")
-            try:
-                error_data = e.response.json()
-                print(f"Error response: {json.dumps(error_data, indent=2)}")
-            except:
-                print(f"Error response text: {e.response.text}")
-        return None
+    return response
 
 def cancel_order(api_key, api_secret, order_id):
     """Cancel an existing order on Ripio Trade.
@@ -160,64 +73,31 @@ def cancel_order(api_key, api_secret, order_id):
     Returns:
         dict: API response with cancellation details
     """
-    base_url = "https://api.ripiotrade.co/v4"
     endpoint = "/orders"
-    url = base_url + endpoint
-    path = "/v4" + endpoint
-    method = "DELETE"
     
     # Prepare cancel data
     cancel_data = {
         "id": order_id
     }
     
-    # Convert cancel data to JSON
-    payload = json.dumps(cancel_data, separators=(',', ':'))
-    
-    # Create authentication headers
-    headers = create_auth_headers(api_key, api_secret, method, path, payload)
-    
     print(f"\nCanceling order with ID: {order_id}...")
     
-    try:
-        # Make the request
-        response = requests.delete(url, headers=headers, data=payload)
+    # Make the request using the utility function
+    response = make_request(api_key, api_secret, "DELETE", endpoint, data=cancel_data)
+    
+    if response:
+        print("Order canceled successfully!")
+    else:
+        print("Failed to cancel order!")
         
-        # Print response status
-        print(f"Response status code: {response.status_code}")
-        
-        if response.status_code == 200:
-            data = response.json()
-            print("Order canceled successfully!")
-            return data
-        else:
-            print("Failed to cancel order!")
-            try:
-                error_data = response.json()
-                print(f"Error response: {json.dumps(error_data, indent=2)}")
-            except:
-                print(f"Error response text: {response.text}")
-            return None
-            
-    except requests.exceptions.RequestException as e:
-        print(f"Error making request: {e}")
-        if hasattr(e, 'response') and e.response:
-            print(f"Response status code: {e.response.status_code}")
-            try:
-                error_data = e.response.json()
-                print(f"Error response: {json.dumps(error_data, indent=2)}")
-            except:
-                print(f"Error response text: {e.response.text}")
-        return None
+    return response
 
 def test_create_and_cancel_order():
     """Test creating and canceling an order on Ripio Trade."""
     # Get API credentials from environment variables
-    api_key = os.environ.get('RIPIO_API_KEY')
-    api_secret = os.environ.get('RIPIO_API_SECRET')
+    api_key, api_secret = get_api_credentials()
     
     if not api_key or not api_secret:
-        print("Error: RIPIO_API_KEY and RIPIO_API_SECRET environment variables must be set")
         return False
     
     print("===== RIPIO TRADE ORDER TEST =====")

@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-import os
 import asyncio
 import json
 import websockets
 import requests
-import base64
-import hmac
-import hashlib
 import time
 from datetime import datetime
+from ripio_api_utils import make_request, get_api_credentials, create_auth_headers
 
 # WebSocket URL
 WSS_URL = "wss://ws.ripiotrade.co"
@@ -18,59 +15,19 @@ async def get_websocket_ticket(api_key, api_secret):
     Get a WebSocket ticket by making an authenticated REST API call
     """
     # API endpoint for getting a WebSocket ticket
-    base_url = "https://api.ripiotrade.co/v4"
     endpoint = "/ticket"
-    url = base_url + endpoint
     
-    # Create authentication headers (same as in test_ripio_api.py)
-    timestamp = str(int(time.time() * 1000))
-    method = "POST"
-    path = "ticket"
+    print(f"Making request to get WebSocket ticket...")
     
-    # Create signature (timestamp + method + '/v4/' + path)
-    message = timestamp + method + '/v4/' + path
-    signature = base64.b64encode(
-        hmac.new(
-            api_secret.encode(),
-            message.encode(),
-            hashlib.sha256
-        ).digest()
-    ).decode()
+    # Make the request using the utility function
+    response = make_request(api_key, api_secret, "POST", endpoint)
     
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': api_key,
-        'timestamp': timestamp,
-        'signature': signature,
-    }
-    
-    print(f"Making request to {url} to get WebSocket ticket...")
-    
-    try:
-        # Make the request
-        response = requests.post(url, headers=headers)
-        response.raise_for_status()
-        
-        # Parse the response
-        data = response.json()
-        
-        if 'data' in data and 'ticket' in data['data']:
-            ticket = data['data']['ticket']
-            print(f"Successfully obtained WebSocket ticket: {ticket[:10]}...")
-            return ticket
-        else:
-            print(f"Unexpected response format: {json.dumps(data, indent=2)}")
-            return None
-            
-    except requests.exceptions.RequestException as e:
-        print(f"Error making request: {e}")
-        if hasattr(e, 'response') and e.response:
-            print(f"Response status code: {e.response.status_code}")
-            try:
-                error_data = e.response.json()
-                print(f"Error response: {json.dumps(error_data, indent=2)}")
-            except:
-                print(f"Error response text: {e.response.text}")
+    if response and 'data' in response and 'ticket' in response['data']:
+        ticket = response['data']['ticket']
+        print(f"Successfully obtained WebSocket ticket: {ticket[:10]}...")
+        return ticket
+    else:
+        print(f"Failed to get WebSocket ticket")
         return None
 
 async def connect_and_subscribe(ticket, api_key, api_secret):
@@ -79,26 +36,8 @@ async def connect_and_subscribe(ticket, api_key, api_secret):
     """
     try:
         # Create authentication headers for WebSocket connection
-        timestamp = str(int(time.time() * 1000))
-        method = "GET"  # WebSocket connection typically uses GET
         path = "ws"
-        
-        # Create signature (timestamp + method + '/v4/' + path)
-        message = timestamp + method + '/v4/' + path
-        signature = base64.b64encode(
-            hmac.new(
-                api_secret.encode(),
-                message.encode(),
-                hashlib.sha256
-            ).digest()
-        ).decode()
-        
-        # Create headers for WebSocket connection
-        headers = {
-            'Authorization': api_key,
-            'timestamp': timestamp,
-            'signature': signature,
-        }
+        headers, timestamp = create_auth_headers(api_key, api_secret, "GET", path)
         
         print(f"Connecting to WebSocket at {WSS_URL} with authentication headers...")
         async with websockets.connect(WSS_URL, extra_headers=headers) as websocket:
@@ -135,11 +74,9 @@ async def connect_and_subscribe(ticket, api_key, api_secret):
 
 async def main():
     # Get API credentials from environment variables
-    api_key = os.environ.get('RIPIO_API_KEY')
-    api_secret = os.environ.get('RIPIO_API_SECRET')
+    api_key, api_secret = get_api_credentials()
     
     if not api_key or not api_secret:
-        print("Error: RIPIO_API_KEY and RIPIO_API_SECRET environment variables must be set")
         return
     
     # Get a WebSocket ticket
