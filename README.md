@@ -122,7 +122,7 @@ Check the API response for error details if a request fails.
 ## Additional Resources
 
 - [Ripio Trade API Documentation](https://apidocs.ripiotrade.co/)
-- [Ripio Trade Website](https://www.ripiotrade.co/)
+- [Ripio Trade Website](https://trade.ripio.com/)
 
 ## Disclaimer
 
