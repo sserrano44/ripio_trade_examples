@@ -24,6 +24,8 @@ def generate_signature(api_secret, timestamp, method, path, payload=""):
     # Create message string: Timestamp + HTTP Method + Path + JSON Payload
     message = f"{timestamp}{method}{path}{payload}"
     
+
+    
     # Create HMAC SHA256 signature
     signature = hmac.new(
         api_secret.encode('utf-8'),
@@ -81,6 +83,7 @@ def make_request(api_key, api_secret, method, endpoint, params=None, data=None):
     # Prepare payload
     payload = ""
     if data:
+        # JSON serialization without sorting keys - maintain order as provided
         payload = json.dumps(data, separators=(',', ':'))
     
     # Create authentication headers
@@ -101,7 +104,8 @@ def make_request(api_key, api_secret, method, endpoint, params=None, data=None):
         # Print response status
         print(f"Response status code: {response.status_code}")
         
-        if response.status_code == 200:
+        # Handle successful responses (200 OK, 201 Created)
+        if response.status_code in [200, 201]:
             data = response.json()
             return data
         else:

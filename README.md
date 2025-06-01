@@ -70,6 +70,8 @@ The `ripio_api_utils.py` file provides utility functions to handle this authenti
 
 5. **example_user_orders.py**: Retrieves user orders with various filters (status, pair, side, etc.).
 
+6. **example_withdrawals.py**: Demonstrates cryptocurrency withdrawals including fee retrieval, withdrawal creation, status checking, and listing withdrawal history.
+
 ### WebSocket Example
 
 - **example_websocket.py**: Demonstrates how to connect to the WebSocket API, authenticate, and subscribe to real-time balance updates.
@@ -97,6 +99,9 @@ The examples in this repository use the following API endpoints:
 - `/book/orders/level-2`: Get order book data
 - `/orders`: Create, cancel, and retrieve orders
 - `/ticket`: Get WebSocket authentication ticket
+- `/withdrawals`: Create and manage cryptocurrency withdrawals
+- `/withdrawals/estimate-fee/{currency_code}`: Get withdrawal fees for a specific currency
+- `/withdrawals/{withdrawal_id}`: Get withdrawal status
 
 ## WebSocket API
 
