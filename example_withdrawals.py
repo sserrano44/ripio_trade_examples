@@ -118,12 +118,17 @@ def get_withdrawal_status(api_key, api_secret, withdrawal_id):
     Returns:
         dict: API response with withdrawal status
     """
-    endpoint = f"/withdrawals/{withdrawal_id}"
+    endpoint = "/withdrawals/withdrawal"
+    
+    # Query parameters for the specific withdrawal
+    params = {
+        "id": withdrawal_id
+    }
     
     print(f"\nChecking status for withdrawal ID: {withdrawal_id}...")
     
     # Make the request using the utility function
-    response = make_request(api_key, api_secret, "GET", endpoint)
+    response = make_request(api_key, api_secret, "GET", endpoint, params=params)
     
     if response and 'data' in response:
         withdrawal = response['data']
@@ -392,9 +397,17 @@ def create_real_withdrawal_with_confirmation():
     
     if response and 'data' in response:
         withdrawal = response['data']
+        withdrawal_id = withdrawal.get('id')
         print("\n✅ Withdrawal created successfully!")
-        print(f"Withdrawal ID: {withdrawal.get('id')}")
+        print(f"Withdrawal ID: {withdrawal_id}")
         print(f"Status: {withdrawal.get('status')}")
+        
+        # Check withdrawal status after creation
+        if withdrawal_id:
+            print("\nWaiting 2 seconds before checking status...")
+            time.sleep(2)
+            get_withdrawal_status(api_key, api_secret, withdrawal_id)
+        
         print("\nPlease check your email for confirmation if required.")
     else:
         print("\n❌ Failed to create withdrawal.")

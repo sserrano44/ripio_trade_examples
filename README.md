@@ -101,7 +101,7 @@ The examples in this repository use the following API endpoints:
 - `/ticket`: Get WebSocket authentication ticket
 - `/withdrawals`: Create and manage cryptocurrency withdrawals
 - `/withdrawals/estimate-fee/{currency_code}`: Get withdrawal fees for a specific currency
-- `/withdrawals/{withdrawal_id}`: Get withdrawal status
+- `/withdrawals/withdrawal`: Get withdrawal status (with `id` query parameter)
 
 ## WebSocket API
 
